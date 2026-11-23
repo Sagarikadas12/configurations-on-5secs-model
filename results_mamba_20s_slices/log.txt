@@ -1,0 +1,22 @@
+cache: D:\RidgeLIEdETECTOINvs3\cache
+seeds: 0, 1, 2
+self-test:
+  PASS  scan = direct formula (largest difference 1.1e-15)
+  PASS  forward on 12 slices: slices 1-6 unchanged when slice 7 changes (largest change 0.0e+00), slices 7-12 changed (smallest 2.4e-03)
+  PASS  one finite logit per video
+  PASS  slicing with 5 s slices = ridge_5s_model.slice_levels
+  PASS  20 s slices: 12 slices x 350 frames = 4200 of 4200 frames, 576 numbers
+  PASS  input in time order: number k*48+j = 20 s slice k+1, signal j
+
+20 s slice z-scores (576 numbers = 12 slices of 350 frames x 48 signals per video, 240.0 s of 240 s), split_90_31.csv: training 90 people (180 videos), test 31 people (62 videos); epochs chosen by an inner person-grouped 5-fold CV over the training people only (1s)
+
+reference:
+  Ridge                        strength=3                     inner CV AUC 0.945 acc 0.844 | test acc 0.855 (0.742-0.952)  precision 0.806  recall 0.935  AUC 0.908  [TP 29 FP 7 TN 24 FN 2]  (0s)
+
+Mamba on cuda (epochs with the lowest inner-CV loss, then 3 seeds trained on all 180 training videos for that many epochs; their logits averaged):
+  Mamba, read-out per slice    epochs=147 (seeds 0.839-0.871) inner CV AUC 0.982 acc 0.933 | test acc 0.887 (0.806-0.968)  precision 0.900  recall 0.871  AUC 0.957  [TP 27 FP 3 TN 28 FN 4]  vs ridge +0.032 (-0.048 to +0.113)  (458s)
+      21,985 weights; inner-CV loss at the chosen epoch 0.171 (epoch 1: 0.604, last: 0.172)
+
+the 5 s Mamba (results_mamba_5s_slices, same split, model and seeds, epochs=109): test acc 0.887  AUC 0.946;  20 s minus 5 s: accuracy +0.000 (-0.065 to +0.065)
+
+results in D:\RidgeLIEdETECTOINvs3\results_mamba_20s_slices: summary.csv, deep_curves.csv, predictions_test.csv, models/, log.txt (470s)

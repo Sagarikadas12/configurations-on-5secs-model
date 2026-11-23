@@ -1,0 +1,49 @@
+
+===== 2026-11-23 16:00  cache: D:\RidgeLIEdETECTOINvs3\cache; seeds: 0, 1, 2; self-test:
+  PASS  scan = direct formula (largest difference 1.1e-15)
+  PASS  forward: slices 1-29 unchanged (largest change 0.0e+00), slices 30-47 changed (smallest 1.1e-04)
+  PASS  forward: one finite logit per video
+  PASS  bidirectional: slices 1-29 change when slice 30 changes (largest change 1.1e-01)
+  PASS  bidirectional: one finite logit per video
+  PASS  input in time order: number k*48+j = slice k+1, signal j
+  PASS  MultiMamba = 3 separate networks (forward, slices; largest difference 6.7e-16)
+  PASS  MultiMamba = 3 separate networks (bidirectional, slices; largest difference 6.7e-16)
+  PASS  MultiMamba = 3 separate networks (bidirectional, mean; largest difference 8.3e-17)
+  PASS  training 3 networks together = one by one (3 epochs, (40, 38, 35) videos; largest difference 1.0e-15, change through training 5.0e-01)
+folds: GroupKFold(5) over the video order of split_90_31.csv
+121 people, 242 videos, 5 person-grouped folds; models per fold: ridge, Mamba, read-out per slice; Mamba on cuda
+  fold 1: training 96 people (192 videos), test 25 people (50 videos)
+    Ridge                        strength 0.3  inner AUC 0.952  test acc 0.940
+    Mamba, read-out per slice    epochs  59  inner AUC 0.957  test acc 0.920 (seeds 0.900-0.960; saved models reload to the same logits)  (243s)
+  fold 1 done in 4.1 min (4 min so far)
+  fold 2: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                        strength 0.3  inner AUC 0.952  test acc 0.854
+    Mamba, read-out per slice    epochs  47  inner AUC 0.971  test acc 0.979 (seeds 0.896-0.958; saved models reload to the same logits)  (254s)
+  fold 2 done in 4.2 min (9 min so far)
+  fold 3: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                        strength 1  inner AUC 0.960  test acc 0.938
+    Mamba, read-out per slice    epochs  53  inner AUC 0.973  test acc 0.958 (seeds 0.917-0.938; saved models reload to the same logits)  (247s)
+  fold 3 done in 4.1 min (13 min so far)
+  fold 4: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                        strength 1  inner AUC 0.956  test acc 0.917
+    Mamba, read-out per slice    epochs  91  inner AUC 0.975  test acc 0.938 (seeds 0.896-0.917; saved models reload to the same logits)  (260s)
+  fold 4 done in 4.3 min (17 min so far)
+  fold 5: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                        strength 1  inner AUC 0.952  test acc 0.896
+    Mamba, read-out per slice    epochs  87  inner AUC 0.980  test acc 0.833 (seeds 0.792-0.833; saved models reload to the same logits)  (258s)
+  fold 5 done in 4.3 min (21 min so far)
+
+per fold (test accuracy):
+  fold                      Ridge  Mamba, read-out per slice
+     1       0.940 (strength=0.3)       0.920 (   epochs=59)
+     2       0.854 (strength=0.3)       0.979 (   epochs=47)
+     3       0.938 (  strength=1)       0.958 (   epochs=53)
+     4       0.917 (  strength=1)       0.938 (   epochs=91)
+     5       0.896 (  strength=1)       0.833 (   epochs=87)
+
+5-fold CV, all 121 people pooled (lie = positive class; 95% intervals resampling people):
+  Ridge                    acc 0.909 (0.868-0.942)  AUC 0.953 (0.919-0.979)  precision 0.916  recall 0.901  specificity 0.917  F1 0.908  MCC 0.818  pair 0.967  [TP 109 FP 10 TN 111 FN 12]
+  Mamba, read-out per slice acc 0.926 (0.888-0.959)  AUC 0.968 (0.937-0.990)  precision 0.933  recall 0.917  specificity 0.934  F1 0.925  MCC 0.851  pair 0.967  [TP 111 FP 8 TN 113 FN 10]
+                             vs ridge: accuracy +0.017 (-0.025 to +0.058), AUC +0.014 (-0.007 to +0.037)
+
+results in D:\RidgeLIEdETECTOINvs3\results_mamba_5s_cv5: config.json, folds.csv, folds_videos.csv, fold_01 ... fold_05/, per_fold.csv, predictions_cv5.csv, summary.csv, log.txt (22 min)

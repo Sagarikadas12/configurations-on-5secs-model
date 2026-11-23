@@ -1,0 +1,35 @@
+{
+ "model": "Mamba, read-out per slice",
+ "d_model": 32,
+ "blocks": 2,
+ "inner_size": 64,
+ "state_size": 16,
+ "dt_rank": 2,
+ "conv_width": 4,
+ "dropout": 0.3,
+ "direction": "forward",
+ "readout": "linear on all 24 slice outputs",
+ "slice_seconds": 10,
+ "frames_per_slice": 175,
+ "slices": 24,
+ "parameters": 22369,
+ "epochs": 69,
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "lr": 0.001,
+ "weight_decay": 0.01,
+ "no_weight_decay": [
+  "A_log",
+  "D"
+ ],
+ "batch": 32,
+ "input": "z-scores [24 slices, 48 signals], zscore.npz",
+ "test_acc_per_seed": [
+  0.8709677419354839,
+  0.8870967741935484,
+  0.8870967741935484
+ ]
+}
