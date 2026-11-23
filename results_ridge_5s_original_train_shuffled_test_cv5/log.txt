@@ -1,0 +1,36 @@
+5 s slice ridge on the full 240 s, slices shuffled: mode per_video, seeds 0-9; 242 videos, 121 people, 47 slices x 48 signals = 2256 numbers per video; 5-fold person-grouped CV (the folds of ridge_5s_cv5.py) (1s)
+training videos in their ORIGINAL order (every fold's model = that of ridge_5s_cv5.py, the same for every seed), test videos scored SHUFFLED
+
+seed 0: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 0: per fold acc 0.467 (sd 0.023), AUC 0.497; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 0 acc 0.467 (0.413-0.521)  AUC 0.496 (0.421-0.572)  precision 0.478  recall 0.727  specificity 0.207  F1 0.577  MCC -0.077  pair 0.479  [TP 88 FP 96 TN 25 FN 33]
+seed 1: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 1: per fold acc 0.537 (sd 0.009), AUC 0.517; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 1 acc 0.537 (0.488-0.587)  AUC 0.507 (0.435-0.577)  precision 0.523  recall 0.843  specificity 0.231  F1 0.646  MCC 0.094  pair 0.521  [TP 102 FP 93 TN 28 FN 19]
+seed 2: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 2: per fold acc 0.451 (sd 0.043), AUC 0.470; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 2 acc 0.450 (0.405-0.500)  AUC 0.467 (0.397-0.537)  precision 0.469  recall 0.760  specificity 0.140  F1 0.580  MCC -0.126  pair 0.438  [TP 92 FP 104 TN 17 FN 29]
+seed 3: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 3: per fold acc 0.504 (sd 0.037), AUC 0.513; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 3 acc 0.504 (0.450-0.554)  AUC 0.517 (0.444-0.585)  precision 0.503  recall 0.760  specificity 0.248  F1 0.605  MCC 0.010  pair 0.554  [TP 92 FP 91 TN 30 FN 29]
+seed 4: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 4: per fold acc 0.474 (sd 0.074), AUC 0.464; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 4 acc 0.475 (0.417-0.533)  AUC 0.462 (0.385-0.536)  precision 0.484  recall 0.727  specificity 0.223  F1 0.581  MCC -0.057  pair 0.446  [TP 88 FP 94 TN 27 FN 33]
+seed 5: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 5: per fold acc 0.475 (sd 0.106), AUC 0.481; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 5 acc 0.475 (0.426-0.529)  AUC 0.477 (0.408-0.545)  precision 0.484  recall 0.744  specificity 0.207  F1 0.586  MCC -0.059  pair 0.455  [TP 90 FP 96 TN 25 FN 31]
+seed 6: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 6: per fold acc 0.512 (sd 0.056), AUC 0.480; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 6 acc 0.512 (0.467-0.554)  AUC 0.478 (0.408-0.550)  precision 0.507  recall 0.843  specificity 0.182  F1 0.634  MCC 0.033  pair 0.471  [TP 102 FP 99 TN 22 FN 19]
+seed 7: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 7: per fold acc 0.442 (sd 0.080), AUC 0.436; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 7 acc 0.442 (0.388-0.496)  AUC 0.429 (0.361-0.501)  precision 0.459  recall 0.653  specificity 0.231  F1 0.539  MCC -0.128  pair 0.430  [TP 79 FP 93 TN 28 FN 42]
+seed 8: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 8: per fold acc 0.484 (sd 0.059), AUC 0.558; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 8 acc 0.483 (0.434-0.537)  AUC 0.544 (0.476-0.615)  precision 0.489  recall 0.744  specificity 0.223  F1 0.590  MCC -0.039  pair 0.545  [TP 90 FP 94 TN 27 FN 31]
+seed 9: 98% of the slices are at another position than in the video
+  shuffled per_video, train original, seed 9: per fold acc 0.545 (sd 0.021), AUC 0.540; strengths 0.3 0.3 1 1 1
+  shuffled per_video, train original, seed 9 acc 0.545 (0.496-0.599)  AUC 0.544 (0.465-0.622)  precision 0.529  recall 0.818  specificity 0.273  F1 0.643  MCC 0.108  pair 0.579  [TP 99 FP 88 TN 33 FN 22]
+
+over 10 seeds: acc 0.489 (sd 0.035, 0.442-0.545), AUC 0.492 (sd 0.037, 0.429-0.544), MCC -0.024, pair 0.492
+results in C:\Users\hiwi\Desktop\TestingFifferentConfigurations(5secsModel)\results_ridge_5s_original_train_shuffled_test_cv5: summary_seeds.csv, log.txt, seed_00 ... seed_09/ (32s)

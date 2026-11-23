@@ -18,6 +18,9 @@ video into its 5 s pieces and putting them back in a random order.
     --test original    only the training videos are shuffled: every fold's model is trained (mean, spread, inner CV for the strength, weights) on
                        shuffled videos and then scores its test videos in their ORIGINAL order -> results_ridge_5s_shuffled_train_original_test_cv5/
                        (permutations.csv: the order every video had while it was a training video; as a test video it was not shuffled)
+    --train original   the other way round: every fold's model is trained on the videos in their ORIGINAL order (so it is exactly the model of
+                       ridge_5s_cv5.py, the same for every seed) and scores its test videos SHUFFLED (with --test shuffled, the default)
+                       -> results_ridge_5s_original_train_shuffled_test_cv5/ (permutations.csv: the order of every video as a test video)
 
 Every seed (--seeds 10: seeds 0-9) is a new set of random orders; everything else is fixed. Folds: the same 5 person-grouped folds as
 ridge_5s_cv5.py and the other 5-fold scripts. Model per fold: exactly that of ridge_5s_cv5.py (ridge_5s_train.py): mean and spread -> z-scores, cut
@@ -26,6 +29,7 @@ at +-4 -> penalty strength by an inner person-grouped 5-fold CV (best held-out A
     C:\\Users\\hiwi\\miniforge3\\envs\\envlie\\python.exe -I -X utf8 ridge_5s_shuffled_cv5.py
     C:\\Users\\hiwi\\miniforge3\\envs\\envlie\\python.exe -I -X utf8 ridge_5s_shuffled_cv5.py --mode same --seeds 1 --out_dir <folder>
     C:\\Users\\hiwi\\miniforge3\\envs\\envlie\\python.exe -I -X utf8 ridge_5s_shuffled_cv5.py --test original   # train shuffled, test normal
+    C:\\Users\\hiwi\\miniforge3\\envs\\envlie\\python.exe -I -X utf8 ridge_5s_shuffled_cv5.py --train original  # train normal, test shuffled
 
 Results in results_ridge_5s_shuffled_cv5/:
     summary_seeds.csv      one row per seed: every metric of the 242 out-of-fold scores with person-resampled 95% intervals, per-fold accuracy
@@ -54,6 +58,7 @@ import ridge_5s_train as model                  # noqa: E402
 FOLDS, SEEDS = 5, 10
 OUT_DIR = os.path.join(HERE, "results_ridge_5s_shuffled_cv5")
 OUT_DIR_TEST_ORIGINAL = os.path.join(HERE, "results_ridge_5s_shuffled_train_original_test_cv5")
+OUT_DIR_TRAIN_ORIGINAL = os.path.join(HERE, "results_ridge_5s_original_train_shuffled_test_cv5")
 SUMMARY_KEYS = ["acc", "auc", "balanced_acc", "precision", "recall", "specificity", "f1", "mcc", "pair_acc"]
 
 
@@ -135,27 +140,34 @@ def cross_validate(X, y, persons, ids, folds, out_dir, label, log, X_test=None):
     return row
 
 
-def run(split_file, out_dir, workers, mode, seeds, test_order="shuffled"):
+def run(split_file, out_dir, workers, mode, seeds, test_order="shuffled", train_order="shuffled"):
     os.makedirs(out_dir, exist_ok=True)
     log = model.Log(os.path.join(out_dir, "log.txt"))
     t0 = time.time()
     d = data.load_dataset(split_file, workers, log)                        # 2,256 numbers per video, as ridge_5s_cv5.py
     ids, persons, y, X = d["ids"], d["persons"], d["y"], d["X"]
     folds = list(GroupKFold(FOLDS).split(np.zeros((len(y), 1)), groups=persons))
-    label_mode = mode if test_order == "shuffled" else f"{mode}, test original"   # the default output stays exactly as before
+    label_mode = mode + (", train original" if train_order == "original" else "") + (", test original" if test_order == "original" else "")
     log(f"5 s slice ridge on the full 240 s, slices shuffled: mode {mode}, seeds 0-{seeds - 1}; {len(ids)} videos, {len(set(persons))} people, "
         f"{data.SLICES} slices x {len(data.SIGNALS)} signals = {X.shape[1]} numbers per video; {FOLDS}-fold person-grouped CV "
         f"(the folds of ridge_5s_cv5.py) ({time.time() - t0:.0f}s)")
-    log("training videos shuffled, test videos scored in their ORIGINAL order (the model never sees the original order before the test)\n"
-        if test_order == "original" else "")
+    log({("shuffled", "shuffled"): "",          # the default output stays exactly as before
+         ("shuffled", "original"): "training videos shuffled, test videos scored in their ORIGINAL order (the model never sees the original "
+                                   "order before the test)\n",
+         ("original", "shuffled"): "training videos in their ORIGINAL order (every fold's model = that of ridge_5s_cv5.py, the same for every "
+                                   "seed), test videos scored SHUFFLED\n",
+         ("original", "original"): "no video shuffled (training and test in the original order)\n"}[(train_order, test_order)])
     rows = []
     for seed in range(seeds):
         Xs, order = shuffle_slices(X, mode, seed)
         sd = os.path.join(out_dir, f"seed_{seed:02d}")
         moved = float(np.mean(order != np.arange(data.SLICES)))
         log(f"seed {seed}: {moved:.0%} of the slices are at another position than in the video")
-        row = cross_validate(Xs.astype(np.float32), y, persons, ids, folds, sd, f"shuffled {label_mode}, seed {seed}", log,
-                             X_test=X if test_order == "original" else None)
+        Xs = Xs.astype(np.float32)
+        X_train = Xs if train_order == "shuffled" else X
+        X_test = Xs if test_order == "shuffled" else X
+        row = cross_validate(X_train, y, persons, ids, folds, sd, f"shuffled {label_mode}, seed {seed}", log,
+                             X_test=None if X_test is X_train else X_test)
         data.write_csv(os.path.join(sd, "permutations.csv"),
                        [{"video_id": ids[i], **{f"pos_{k + 1:02d}": int(order[i, k]) + 1 for k in range(data.SLICES)}} for i in range(len(ids))],
                        ["video_id"] + [f"pos_{k + 1:02d}" for k in range(data.SLICES)])
@@ -179,13 +191,19 @@ def main():
                    help="per_video: own random order for every video (default); same: one order for all videos; none: no shuffle")
     p.add_argument("--seeds", type=int, default=SEEDS, help=f"number of random seeds, 0 ... seeds-1 (default {SEEDS})")
     p.add_argument("--test", choices=("shuffled", "original"), default="shuffled",
-                   help="order of the test videos: shuffled like the training videos (default) or their original order")
+                   help="order of the test videos: shuffled (default) or their original order")
+    p.add_argument("--train", choices=("shuffled", "original"), default="shuffled",
+                   help="order of the training videos: shuffled (default) or their original order")
     p.add_argument("--split", default=data.SPLIT_FILE, help=f"split file: its videos, people and labels (default {data.SPLIT_FILE})")
-    p.add_argument("--out_dir", help=f"results folder (default {OUT_DIR}, or {OUT_DIR_TEST_ORIGINAL} with --test original)")
+    p.add_argument("--out_dir", help=f"results folder (default {OUT_DIR}; {OUT_DIR_TEST_ORIGINAL} with --test original; "
+                                     f"{OUT_DIR_TRAIN_ORIGINAL} with --train original)")
     p.add_argument("--workers", type=int, default=4, help="processes for reading raw CSVs into cache/ the first time (default 4)")
     args = p.parse_args()
-    out_dir = args.out_dir or (OUT_DIR_TEST_ORIGINAL if args.test == "original" else OUT_DIR)
-    run(args.split, out_dir, max(1, args.workers), args.mode, max(1, args.seeds), args.test)
+    if args.train == "original" and args.test == "original" and not args.out_dir:
+        raise SystemExit("[error] --train original --test original shuffles nothing; give --out_dir if you really want it")
+    out_dir = args.out_dir or {("shuffled", "shuffled"): OUT_DIR, ("shuffled", "original"): OUT_DIR_TEST_ORIGINAL,
+                               ("original", "shuffled"): OUT_DIR_TRAIN_ORIGINAL}[(args.train, args.test)]
+    run(args.split, out_dir, max(1, args.workers), args.mode, max(1, args.seeds), args.test, args.train)
 
 
 if __name__ == "__main__":
