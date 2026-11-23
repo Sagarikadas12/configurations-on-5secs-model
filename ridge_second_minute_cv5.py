@@ -27,6 +27,9 @@ The train / test column of the split file is not used here.
                                                                        # any other window: multiples of 5 s between 0 and 240 s
     ... --norm video      average and spread of every signal over the whole video instead of the window (frames outside the window are then
                           used for those two only; see ridge_skip40s_videonorm_cv5.py)
+    ... --windows 0-60,120-240   several windows at once (here: every video without its second minute; see ridge_without_2nd_minute_cv5.py):
+                          the 5 s slices of every window one after the other, average and spread over all their frames together;
+                          weights.npz then holds window_bounds and slice_edges instead of slice_bounds
 
 Results in results_ridge_second_minute_cv5/:
     summary.csv            all 242 out-of-fold scores together: every metric with person-resampled 95% intervals; per-fold accuracy mean, sd
@@ -85,10 +88,31 @@ def window_names(bounds):
             for k, (a, b) in enumerate(zip(bounds[:-1], bounds[1:])) for s in data.SIGNALS]
 
 
-def run(split_file, out_dir, workers, start_seconds, end_seconds, folds_n=FOLDS, norm="window"):
-    """norm="window" (default): average and spread of the window itself; "video": of the whole video (see window_levels)."""
+def windows_levels(x, bounds_list, norm="window"):
+    """Several windows at once (e.g. 0-60 s and 120-240 s: every video without its second minute): the 5 s slices of every window (each from
+    slice_bounds) one after the other, every signal relative to the average and spread of all the windows' frames together (norm="window", so no
+    frame outside the windows is used) or of the whole video (norm="video")."""
+    part = np.concatenate([x[b[0]:b[-1]] for b in bounds_list]) if norm == "window" else x
+    lv = np.stack([x[a:c].mean(0) for b in bounds_list for a, c in zip(b[:-1], b[1:])])
+    return ((lv - part.mean(0)) / np.maximum(part.std(0), 1e-6)).ravel()
+
+
+def windows_names(bounds_list):
+    """(slice, seconds, signal) of each number, in the order of windows_levels; slices numbered 1, 2, ... over all windows."""
+    edges = [(a, c) for b in bounds_list for a, c in zip(b[:-1], b[1:])]
+    return [(k + 1, f"{a / data.RATE:.1f}-{c / data.RATE:.1f}", s) for k, (a, c) in enumerate(edges) for s in data.SIGNALS]
+
+
+def run(split_file, out_dir, workers, start_seconds, end_seconds, folds_n=FOLDS, norm="window", windows=None):
+    """norm="window" (default): average and spread of the window itself; "video": of the whole video (see window_levels).
+    windows: several (start_seconds, end_seconds) windows instead of one, in time order, not overlapping (start_seconds and end_seconds are then
+    not used); e.g. [(0, 60), (120, 240)]: every video without its second minute (see windows_levels)."""
     if norm not in ("window", "video"):
         raise SystemExit(f"[error] norm must be 'window' or 'video', not {norm!r}")
+    bounds_list = [slice_bounds(a, b) for a, b in (windows or [(start_seconds, end_seconds)])]
+    multi = len(bounds_list) > 1
+    if any(p[-1] > q[0] for p, q in zip(bounds_list[:-1], bounds_list[1:])):
+        raise SystemExit(f"[error] the windows must be in time order and must not overlap: {windows}")
     os.makedirs(out_dir, exist_ok=True)
     log = model.Log(os.path.join(out_dir, "log.txt"))
     t0 = time.time()
@@ -98,13 +122,20 @@ def run(split_file, out_dir, workers, start_seconds, end_seconds, folds_n=FOLDS,
     if too_long:
         raise SystemExit(f"[error] longer than {data.FRAMES / data.RATE:.0f} s: {', '.join(too_long)}")
 
-    bounds = slice_bounds(start_seconds, end_seconds)
-    start_frame, end_frame = int(bounds[0]), int(bounds[-1])
-    n_frames, slices, widths = end_frame - start_frame, len(bounds) - 1, np.diff(bounds)
-    window = f"{start_frame / data.RATE:.0f}-{end_frame / data.RATE:.0f} s"
+    bounds = bounds_list[0]                                                # one window: everything exactly as before
+    start_frame, end_frame = int(bounds_list[0][0]), int(bounds_list[-1][-1])
+    n_frames = sum(int(b[-1] - b[0]) for b in bounds_list)
+    slices, widths = sum(len(b) - 1 for b in bounds_list), np.concatenate([np.diff(b) for b in bounds_list])
+    window = " + ".join(f"{b[0] / data.RATE:.0f}-{b[-1] / data.RATE:.0f}" for b in bounds_list) + " s"
+    frames_used = " + ".join(f"{b[0]}-{b[-1]}" for b in bounds_list)
     if norm == "video":                                                    # only then: the default output stays exactly as before
         window += f", normalised over 0-{data.FRAMES / data.RATE:.0f} s"
-    X = np.stack([window_levels(x, bounds, norm) for x in xs]).astype(np.float32)
+    if multi:
+        X = np.stack([windows_levels(x, bounds_list, norm) for x in xs]).astype(np.float32)
+    else:
+        X = np.stack([window_levels(x, bounds, norm) for x in xs]).astype(np.float32)
+    geometry = ({"window_bounds": np.array([[b[0], b[-1]] for b in bounds_list]),
+                 "slice_edges": np.array([[a, c] for b in bounds_list for a, c in zip(b[:-1], b[1:])])} if multi else {"slice_bounds": bounds})
     folds = list(GroupKFold(folds_n).split(np.zeros((len(y), 1)), groups=persons))
     fold_of = np.zeros(len(y), int)
     for f, (_, te) in enumerate(folds, 1):
@@ -112,7 +143,7 @@ def run(split_file, out_dir, workers, start_seconds, end_seconds, folds_n=FOLDS,
 
     rest = ("the rest of the video is not used" if norm == "window" else
             "the rest of the video is used only for the average and spread of every signal")
-    log(f"ridge on {window} of every video only (frames {start_frame}-{end_frame}: {slices} slices of {data.SECONDS} s, "
+    log(f"ridge on {window} of every video only (frames {frames_used}: {slices} slices of {data.SECONDS} s, "
         f"{widths.min()}-{widths.max()} frames each, = {n_frames} of {data.FRAMES} frames; {rest}), "
         f"{folds_n}-fold person-grouped CV")
     log(f"{len(ids)} videos, {len(set(persons))} people; {slices} slices x {len(data.SIGNALS)} signals = {X.shape[1]} numbers per video; folds of "
@@ -120,7 +151,7 @@ def run(split_file, out_dir, workers, start_seconds, end_seconds, folds_n=FOLDS,
         f"the other {folds_n - 1} folds and tests it on its own people ({time.time() - t0:.0f}s)\n")
 
     S = np.zeros(len(y))
-    per_fold, weights, names = [], [], window_names(bounds)
+    per_fold, weights, names = [], [], (windows_names(bounds_list) if multi else window_names(bounds))
     for f, (tr, te) in enumerate(folds, 1):
         m = model.fit(X, y, persons, tr)                                   # new model: mean, spread, inner CV for the strength, weights
         table = model.strength_table(X, y, tr, m)
@@ -146,7 +177,7 @@ def run(split_file, out_dir, workers, start_seconds, end_seconds, folds_n=FOLDS,
         os.makedirs(d, exist_ok=True)
         np.savez_compressed(os.path.join(d, "weights.npz"), mean=m["mean"], spread=m["spread"], weight=m["weight"], penalty=m["penalty"],
                             signals=np.array(data.SIGNALS), seconds=data.SECONDS, start_frame=start_frame, end_frame=end_frame,
-                            slice_bounds=bounds, rate=data.RATE, frames=data.FRAMES, clip=data.CLIP, fold=f,
+                            **geometry, rate=data.RATE, frames=data.FRAMES, clip=data.CLIP, fold=f,
                             train_people=np.array(sorted(set(persons[tr]))), test_people=np.array(test_people),
                             **({"norm": norm} if norm != "window" else {}))
         data.write_csv(os.path.join(d, "penalty_choice.csv"), table, list(table[0]), fmt="{:.6g}")
@@ -203,11 +234,14 @@ def main():
     p.add_argument("--folds", type=int, default=FOLDS, help=f"person-grouped folds (default {FOLDS})")
     p.add_argument("--norm", choices=("window", "video"), default="window",
                    help="average and spread of every signal over the window (default) or over the whole video")
+    p.add_argument("--windows", help="several windows instead of --start_seconds/--end_seconds, e.g. 0-60,120-240 (every video without its "
+                                     "second minute); in time order, multiples of 5 s")
     p.add_argument("--split", default=data.SPLIT_FILE, help=f"split file: its videos, people and labels (default {data.SPLIT_FILE})")
     p.add_argument("--out_dir", default=OUT_DIR, help=f"results folder (default {OUT_DIR})")
     p.add_argument("--workers", type=int, default=4, help="processes for reading raw CSVs into cache/ the first time (default 4)")
     args = p.parse_args()
-    run(args.split, args.out_dir, max(1, args.workers), args.start_seconds, args.end_seconds, args.folds, args.norm)
+    windows = [tuple(int(v) for v in w.split("-")) for w in args.windows.split(",")] if args.windows else None
+    run(args.split, args.out_dir, max(1, args.workers), args.start_seconds, args.end_seconds, args.folds, args.norm, windows)
 
 
 if __name__ == "__main__":
