@@ -1,0 +1,32 @@
+ridge on 0-120 + 180-240 s of every video only (frames 0-2100 + 3150-4200: 36 slices of 5 s, 87-88 frames each, = 3150 of 4200 frames; the rest of the video is not used), 5-fold person-grouped CV
+242 videos, 121 people; 36 slices x 48 signals = 1728 numbers per video; folds of 24-25 people; every fold trains a new model on the other 4 folds and tests it on its own people (1s)
+
+fold  1: train 96 people (192 videos), test 25 people (50 videos): P000 P003 P008 P014 P018 P023 P029 P034 P039 P044 P049 P054 P060 P063 P068 P073 P078 P083 P091 P094 P099 P105 P110 P115 P121
+         strength 10 (inner-CV AUC 0.927), training acc 0.984  ->  test acc 0.840 (42/50)  AUC 0.922  pair 0.960  [TP 22 FP 5 TN 20 FN 3]  wrong: lie_P000, lie_P054, truth_P063, truth_P068, truth_P073, truth_P078, truth_P115, lie_P115
+fold  2: train 97 people (194 videos), test 24 people (48 videos): P004 P009 P019 P024 P027 P028 P035 P040 P045 P050 P055 P059 P064 P069 P075 P079 P084 P090 P095 P100 P106 P111 P116 P120
+         strength 3 (inner-CV AUC 0.913), training acc 0.995  ->  test acc 0.792 (38/48)  AUC 0.908  pair 0.917  [TP 19 FP 5 TN 19 FN 5]  wrong: truth_P004, lie_P027, lie_P040, lie_P050, truth_P055, truth_P079, truth_P084, lie_P095, lie_P111, truth_P116
+fold  3: train 97 people (194 videos), test 24 people (48 videos): P005 P010 P013 P015 P020 P025 P031 P036 P041 P046 P051 P056 P061 P065 P070 P080 P085 P088 P089 P096 P101 P107 P112 P117
+         strength 3 (inner-CV AUC 0.918), training acc 0.995  ->  test acc 0.875 (42/48)  AUC 0.932  pair 1.000  [TP 21 FP 3 TN 21 FN 3]  wrong: lie_P010, lie_P056, truth_P061, lie_P080, truth_P089, truth_P096
+fold  4: train 97 people (194 videos), test 24 people (48 videos): P001 P006 P011 P016 P021 P026 P032 P037 P042 P047 P052 P057 P066 P071 P074 P076 P081 P086 P092 P097 P103 P108 P113 P118
+         strength 3 (inner-CV AUC 0.907), training acc 0.995  ->  test acc 0.833 (40/48)  AUC 0.889  pair 0.917  [TP 21 FP 5 TN 19 FN 3]  wrong: truth_P001, truth_P006, truth_P071, truth_P081, lie_P108, lie_P113, truth_P118, lie_P118
+fold  5: train 97 people (194 videos), test 24 people (48 videos): P002 P007 P012 P017 P022 P030 P033 P038 P043 P048 P053 P058 P062 P067 P072 P077 P082 P087 P093 P098 P104 P109 P114 P119
+         strength 3 (inner-CV AUC 0.887), training acc 0.995  ->  test acc 0.896 (43/48)  AUC 0.976  pair 1.000  [TP 21 FP 2 TN 22 FN 3]  wrong: lie_P002, lie_P053, lie_P058, truth_P062, truth_P067
+
+per fold: test acc 0.847 on average (sd 0.040, 0.792-0.896), test AUC 0.925 (sd 0.033, 0.889-0.976); strengths chosen: 10 3 3 3 3
+all 242 videos, each scored by the model of its fold (95% intervals resample people, 2000 times):
+  0-120 + 180-240 s, 5-fold acc 0.847 (0.806-0.888)  AUC 0.917 (0.877-0.950)  precision 0.839  recall 0.860  specificity 0.835  F1 0.849  MCC 0.694  pair 0.959  [TP 104 FP 20 TN 101 FN 17]
+
+the 5 models' weights: correlation between two folds 0.858-0.881 (average 0.868); numbers whose weight has the same sign in all 5 folds: 1026 of 1728
+largest average weights (+ pushes towards lie), with their spread over the folds:
+  +0.00871 (sd 0.00268, same sign in 5/5 folds)  slice  5 (20.0-25.0 s)  eye opening 1
+  +0.00863 (sd 0.00269, same sign in 5/5 folds)  slice  5 (20.0-25.0 s)  eye opening 2
+  +0.00850 (sd 0.00225, same sign in 5/5 folds)  slice  8 (35.0-40.0 s)  eye opening 2
+  +0.00817 (sd 0.00271, same sign in 5/5 folds)  slice  8 (35.0-40.0 s)  eye opening 1
+  +0.00816 (sd 0.00253, same sign in 5/5 folds)  slice  6 (25.0-30.0 s)  eye opening 2
+  +0.00805 (sd 0.00254, same sign in 5/5 folds)  slice  6 (25.0-30.0 s)  eye opening 1
+  +0.00790 (sd 0.00235, same sign in 5/5 folds)  slice  7 (30.0-35.0 s)  eye opening 1
+  +0.00744 (sd 0.00208, same sign in 5/5 folds)  slice  7 (30.0-35.0 s)  eye opening 2
+  -0.00683 (sd 0.00199, same sign in 5/5 folds)  slice 19 (90.0-95.0 s)  eye opening 1
+  +0.00682 (sd 0.00192, same sign in 5/5 folds)  slice 15 (70.0-75.0 s)  brow height 2
+
+results in C:\Users\hiwi\Desktop\TestingFifferentConfigurations(5secsModel)\results_ridge_without_3rd_minute_cv5: summary.csv, per_fold.csv, predictions.csv, folds.csv, fold_01 ... fold_05/ (weights.npz, penalty_choice.csv), weights_all_folds.csv, log.txt (5s)
