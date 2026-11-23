@@ -14,12 +14,18 @@ video into its 5 s pieces and putting them back in a random order.
                        same results as ridge_5s_cv5.py, only with the weights in the new order)
     --mode none        no shuffle (a check: must reproduce ridge_5s_cv5.py exactly)
 
+    --test shuffled    (default) the test videos are shuffled like the training videos (every video has its own order, used wherever it appears)
+    --test original    only the training videos are shuffled: every fold's model is trained (mean, spread, inner CV for the strength, weights) on
+                       shuffled videos and then scores its test videos in their ORIGINAL order -> results_ridge_5s_shuffled_train_original_test_cv5/
+                       (permutations.csv: the order every video had while it was a training video; as a test video it was not shuffled)
+
 Every seed (--seeds 10: seeds 0-9) is a new set of random orders; everything else is fixed. Folds: the same 5 person-grouped folds as
 ridge_5s_cv5.py and the other 5-fold scripts. Model per fold: exactly that of ridge_5s_cv5.py (ridge_5s_train.py): mean and spread -> z-scores, cut
 at +-4 -> penalty strength by an inner person-grouped 5-fold CV (best held-out AUC) -> ridge weights -> tested once on the fold's people.
 
     C:\\Users\\hiwi\\miniforge3\\envs\\envlie\\python.exe -I -X utf8 ridge_5s_shuffled_cv5.py
     C:\\Users\\hiwi\\miniforge3\\envs\\envlie\\python.exe -I -X utf8 ridge_5s_shuffled_cv5.py --mode same --seeds 1 --out_dir <folder>
+    C:\\Users\\hiwi\\miniforge3\\envs\\envlie\\python.exe -I -X utf8 ridge_5s_shuffled_cv5.py --test original   # train shuffled, test normal
 
 Results in results_ridge_5s_shuffled_cv5/:
     summary_seeds.csv      one row per seed: every metric of the 242 out-of-fold scores with person-resampled 95% intervals, per-fold accuracy
@@ -47,6 +53,7 @@ import ridge_5s_train as model                  # noqa: E402
 
 FOLDS, SEEDS = 5, 10
 OUT_DIR = os.path.join(HERE, "results_ridge_5s_shuffled_cv5")
+OUT_DIR_TEST_ORIGINAL = os.path.join(HERE, "results_ridge_5s_shuffled_train_original_test_cv5")
 SUMMARY_KEYS = ["acc", "auc", "balanced_acc", "precision", "recall", "specificity", "f1", "mcc", "pair_acc"]
 
 
@@ -65,8 +72,10 @@ def shuffle_slices(X, mode, seed):
     return X3[np.arange(n)[:, None], order].reshape(n, slices * signals), order
 
 
-def cross_validate(X, y, persons, ids, folds, out_dir, label, log):
-    """ridge_5s_cv5.py's fold loop and files on the numbers X."""
+def cross_validate(X, y, persons, ids, folds, out_dir, label, log, X_test=None):
+    """ridge_5s_cv5.py's fold loop and files on the numbers X. X_test: the numbers the test videos are scored with (default X; the original,
+    unshuffled numbers for --test original). Training, the inner CV for the strength and the training accuracy always use X."""
+    X_test = X if X_test is None else X_test
     os.makedirs(out_dir, exist_ok=True)
     folds_n = len(folds)
     fold_of = np.zeros(len(y), int)
@@ -77,7 +86,7 @@ def cross_validate(X, y, persons, ids, folds, out_dir, label, log):
     for f, (tr, te) in enumerate(folds, 1):
         m = model.fit(X, y, persons, tr)
         table = model.strength_table(X, y, tr, m)
-        s, s_tr = model.score(X[te], m), model.score(X[tr], m)
+        s, s_tr = model.score(X_test[te], m), model.score(X[tr], m)
         S[te] = s
         weights.append(m["weight"])
         q = model.point_metrics(y[te], s)
@@ -126,32 +135,36 @@ def cross_validate(X, y, persons, ids, folds, out_dir, label, log):
     return row
 
 
-def run(split_file, out_dir, workers, mode, seeds):
+def run(split_file, out_dir, workers, mode, seeds, test_order="shuffled"):
     os.makedirs(out_dir, exist_ok=True)
     log = model.Log(os.path.join(out_dir, "log.txt"))
     t0 = time.time()
     d = data.load_dataset(split_file, workers, log)                        # 2,256 numbers per video, as ridge_5s_cv5.py
     ids, persons, y, X = d["ids"], d["persons"], d["y"], d["X"]
     folds = list(GroupKFold(FOLDS).split(np.zeros((len(y), 1)), groups=persons))
+    label_mode = mode if test_order == "shuffled" else f"{mode}, test original"   # the default output stays exactly as before
     log(f"5 s slice ridge on the full 240 s, slices shuffled: mode {mode}, seeds 0-{seeds - 1}; {len(ids)} videos, {len(set(persons))} people, "
         f"{data.SLICES} slices x {len(data.SIGNALS)} signals = {X.shape[1]} numbers per video; {FOLDS}-fold person-grouped CV "
-        f"(the folds of ridge_5s_cv5.py) ({time.time() - t0:.0f}s)\n")
+        f"(the folds of ridge_5s_cv5.py) ({time.time() - t0:.0f}s)")
+    log("training videos shuffled, test videos scored in their ORIGINAL order (the model never sees the original order before the test)\n"
+        if test_order == "original" else "")
     rows = []
     for seed in range(seeds):
         Xs, order = shuffle_slices(X, mode, seed)
         sd = os.path.join(out_dir, f"seed_{seed:02d}")
         moved = float(np.mean(order != np.arange(data.SLICES)))
         log(f"seed {seed}: {moved:.0%} of the slices are at another position than in the video")
-        row = cross_validate(Xs.astype(np.float32), y, persons, ids, folds, sd, f"shuffled {mode}, seed {seed}", log)
+        row = cross_validate(Xs.astype(np.float32), y, persons, ids, folds, sd, f"shuffled {label_mode}, seed {seed}", log,
+                             X_test=X if test_order == "original" else None)
         data.write_csv(os.path.join(sd, "permutations.csv"),
                        [{"video_id": ids[i], **{f"pos_{k + 1:02d}": int(order[i, k]) + 1 for k in range(data.SLICES)}} for i in range(len(ids))],
                        ["video_id"] + [f"pos_{k + 1:02d}" for k in range(data.SLICES)])
-        rows.append({"seed": seed, "mode": mode, **{k: row[k] for k in ("fold_acc_mean", "fold_acc_sd", "penalties")},
+        rows.append({"seed": seed, "mode": label_mode, **{k: row[k] for k in ("fold_acc_mean", "fold_acc_sd", "penalties")},
                      **{f: row[f] for k in SUMMARY_KEYS for f in ((k, f"{k}_low", f"{k}_high") if f"{k}_low" in row else (k,))}})
     fields = list(rows[0])
     num = [f for f in fields if f not in ("seed", "mode", "penalties")]
-    mean = {"seed": "mean", "mode": mode, "penalties": "", **{f: float(np.mean([r[f] for r in rows])) for f in num}}
-    sdv = {"seed": "sd", "mode": mode, "penalties": "", **{f: float(np.std([r[f] for r in rows], ddof=1)) if len(rows) > 1 else float("nan")
+    mean = {"seed": "mean", "mode": label_mode, "penalties": "", **{f: float(np.mean([r[f] for r in rows])) for f in num}}
+    sdv = {"seed": "sd", "mode": label_mode, "penalties": "", **{f: float(np.std([r[f] for r in rows], ddof=1)) if len(rows) > 1 else float("nan")
                                                           for f in num}}
     data.write_csv(os.path.join(out_dir, "summary_seeds.csv"), rows + [mean, sdv], fields)
     log(f"\nover {seeds} seeds: acc {mean['acc']:.3f} (sd {sdv['acc']:.3f}, {min(r['acc'] for r in rows):.3f}-{max(r['acc'] for r in rows):.3f}), "
@@ -165,11 +178,14 @@ def main():
     p.add_argument("--mode", choices=("per_video", "same", "none"), default="per_video",
                    help="per_video: own random order for every video (default); same: one order for all videos; none: no shuffle")
     p.add_argument("--seeds", type=int, default=SEEDS, help=f"number of random seeds, 0 ... seeds-1 (default {SEEDS})")
+    p.add_argument("--test", choices=("shuffled", "original"), default="shuffled",
+                   help="order of the test videos: shuffled like the training videos (default) or their original order")
     p.add_argument("--split", default=data.SPLIT_FILE, help=f"split file: its videos, people and labels (default {data.SPLIT_FILE})")
-    p.add_argument("--out_dir", default=OUT_DIR, help=f"results folder (default {OUT_DIR})")
+    p.add_argument("--out_dir", help=f"results folder (default {OUT_DIR}, or {OUT_DIR_TEST_ORIGINAL} with --test original)")
     p.add_argument("--workers", type=int, default=4, help="processes for reading raw CSVs into cache/ the first time (default 4)")
     args = p.parse_args()
-    run(args.split, args.out_dir, max(1, args.workers), args.mode, max(1, args.seeds))
+    out_dir = args.out_dir or (OUT_DIR_TEST_ORIGINAL if args.test == "original" else OUT_DIR)
+    run(args.split, out_dir, max(1, args.workers), args.mode, max(1, args.seeds), args.test)
 
 
 if __name__ == "__main__":
