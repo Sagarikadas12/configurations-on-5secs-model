@@ -1,0 +1,63 @@
+{
+ "experiment": "5-fold person-grouped CV, forward Mamba with a read-out per slice, 10 s slices",
+ "script": "mamba_5s_cv5.py",
+ "code_version": "3985496130d1a166cf42df44655e8f026fae11bc (with uncommitted changes)",
+ "date": "2026-11-23 16:47",
+ "torch": "2.1.1+cu118",
+ "device": "cuda",
+ "split_file": "D:\\RidgeLIEdETECTOINvs3\\split_90_31.csv",
+ "cache_dir": "D:\\RidgeLIEdETECTOINvs3\\cache",
+ "people": 121,
+ "videos": 242,
+ "input": {
+  "slices": 24,
+  "slice_frames": 175,
+  "slice_seconds": 10,
+  "signals": 48,
+  "numbers_per_video": 1152,
+  "normalisation": "per slice and signal (slice average - video average) / video spread (mamba_10s_slices.slice_levels(x, 10)), then z-scored with the fold's training videos and cut at +-4"
+ },
+ "folds": {
+  "n_folds": 5,
+  "method": "from D:\\RidgeLIEdETECTOINvs3\\results_mamba_5s_cv5\\folds.csv",
+  "file": "folds.csv",
+  "videos_file": "folds_videos.csv"
+ },
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "max_epochs": 200,
+ "inner_folds": 5,
+ "epochs_rule": "lowest inner-CV held-out loss (inner person-grouped 5-fold CV over the fold's training people, seeds averaged)",
+ "model": {
+  "name": "Mamba, read-out per slice",
+  "class": "mamba_10s_slices.MambaPerSlice(24)",
+  "d_model": 32,
+  "blocks": 2,
+  "inner_size": 64,
+  "state_size": 16,
+  "dt_rank": 2,
+  "conv_width": 4,
+  "dropout": 0.3,
+  "direction": "forward",
+  "readout": "linear on all 24 slice outputs",
+  "slice_seconds": 10,
+  "frames_per_slice": 175,
+  "slices": 24
+ },
+ "training": {
+  "loss": "binary cross-entropy",
+  "optimizer": "AdamW",
+  "lr": 0.001,
+  "weight_decay": 0.01,
+  "no_weight_decay": [
+   "A_log",
+   "D"
+  ],
+  "batch": 32,
+  "final": "every seed trained on all of the fold's training videos for the chosen epochs; test logits averaged"
+ },
+ "reference": "ridge of ridge_5s_model.fit on the same folds"
+}
