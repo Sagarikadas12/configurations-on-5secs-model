@@ -1,0 +1,11 @@
+fold,model,setting,inner_cv_auc,test_acc,test_right,test_videos,test_auc,tp,fp,tn,fn
+1,Ridge,strength=1,0.9159,0.8600,43,50,0.9296,22,4,21,3
+1,"Mamba, read-out per slice",epochs=24,0.9440,0.8600,43,50,0.9568,23,5,20,2
+2,Ridge,strength=3,0.9054,0.8125,39,48,0.9115,18,3,21,6
+2,"Mamba, read-out per slice",epochs=24,0.9565,0.8542,41,48,0.9358,20,3,21,4
+3,Ridge,strength=1,0.9030,0.8750,42,48,0.9366,21,3,21,3
+3,"Mamba, read-out per slice",epochs=23,0.9499,0.9167,44,48,0.9688,22,2,22,2
+4,Ridge,strength=1,0.9105,0.8333,40,48,0.9010,20,4,20,4
+4,"Mamba, read-out per slice",epochs=24,0.9359,0.8958,43,48,0.9635,21,2,22,3
+5,Ridge,strength=3,0.9056,0.8125,39,48,0.8663,21,6,18,3
+5,"Mamba, read-out per slice",epochs=29,0.9600,0.8125,39,48,0.9028,19,4,20,5
