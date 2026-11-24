@@ -1,0 +1,58 @@
+
+===== 2026-11-24 12:45  cache: D:\RidgeLIEdETECTOINvs3\cache; seeds: 0, 1, 2; self-test:
+  PASS  scan = direct formula (largest difference 1.1e-15)
+  PASS  forward: slices 1-29 unchanged (largest change 0.0e+00), slices 30-47 changed (smallest 1.1e-04)
+  PASS  forward: one finite logit per video
+  PASS  bidirectional: slices 1-29 change when slice 30 changes (largest change 1.1e-01)
+  PASS  bidirectional: one finite logit per video
+  PASS  input in time order: number k*48+j = slice k+1, signal j
+  PASS  MultiMamba = 3 separate networks (forward, slices; largest difference 6.7e-16)
+  PASS  MultiMamba = 3 separate networks (bidirectional, slices; largest difference 6.7e-16)
+  PASS  MultiMamba = 3 separate networks (bidirectional, mean; largest difference 8.3e-17)
+  PASS  training 3 networks together = one by one (3 epochs, (40, 38, 35) videos; largest difference 1.0e-15, change through training 5.0e-01)
+self-test for 20 s slices:
+  PASS  scan = direct formula (largest difference 1.1e-15)
+  PASS  forward on 12 slices: slices 1-6 unchanged when slice 7 changes (largest change 0.0e+00), slices 7-12 changed (smallest 2.4e-03)
+  PASS  one finite logit per video
+  PASS  slicing with 5 s slices = ridge_5s_model.slice_levels
+  PASS  20 s slices: 12 slices x 350 frames = 4200 of 4200 frames, 576 numbers
+  PASS  input in time order: number k*48+j = 20 s slice k+1, signal j
+  PASS  3 networks together (MultiMamba) = one by one on 12 slices (largest difference 6.7e-16)
+20 s slices: 12 slices of 350 frames x 48 signals = 576 numbers per video (mamba_10s_slices.slice_levels(x, 20))
+folds: from D:\RidgeLIEdETECTOINvs3\results_mamba_5s_cv5\folds.csv (the same as GroupKFold(5))
+121 people, 242 videos, 5 person-grouped folds; models per fold: ridge, Mamba, read-out per slice; Mamba on cuda
+  fold 1: training 96 people (192 videos), test 25 people (50 videos)
+    Ridge                        strength 1  inner AUC 0.943  test acc 0.900
+    Mamba, read-out per slice    epochs  30  inner AUC 0.963  test acc 0.900 (seeds 0.880-0.880; saved models reload to the same logits)  (32s)
+  fold 1 done in 0.5 min (1 min so far)
+  fold 2: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                        strength 1  inner AUC 0.935  test acc 0.875
+    Mamba, read-out per slice    epochs  42  inner AUC 0.967  test acc 0.896 (seeds 0.896-0.938; saved models reload to the same logits)  (34s)
+  fold 2 done in 0.6 min (2 min so far)
+  fold 3: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                        strength 3  inner AUC 0.941  test acc 0.896
+    Mamba, read-out per slice    epochs  50  inner AUC 0.971  test acc 0.875 (seeds 0.812-0.917; saved models reload to the same logits)  (34s)
+  fold 3 done in 0.6 min (2 min so far)
+  fold 4: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                        strength 1  inner AUC 0.962  test acc 0.833
+    Mamba, read-out per slice    epochs  40  inner AUC 0.973  test acc 0.875 (seeds 0.854-0.938; saved models reload to the same logits)  (33s)
+  fold 4 done in 0.5 min (3 min so far)
+  fold 5: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                        strength 3  inner AUC 0.945  test acc 0.896
+    Mamba, read-out per slice    epochs  43  inner AUC 0.978  test acc 0.833 (seeds 0.792-0.875; saved models reload to the same logits)  (35s)
+  fold 5 done in 0.6 min (3 min so far)
+
+per fold (test accuracy):
+  fold                      Ridge  Mamba, read-out per slice
+     1       0.900 (  strength=1)       0.900 (   epochs=30)
+     2       0.875 (  strength=1)       0.896 (   epochs=42)
+     3       0.896 (  strength=3)       0.875 (   epochs=50)
+     4       0.833 (  strength=1)       0.875 (   epochs=40)
+     5       0.896 (  strength=3)       0.833 (   epochs=43)
+
+5-fold CV, all 121 people pooled (lie = positive class; 95% intervals resampling people):
+  Ridge                    acc 0.880 (0.835-0.926)  AUC 0.936 (0.895-0.970)  precision 0.871  recall 0.893  specificity 0.868  F1 0.882  MCC 0.761  pair 0.934  [TP 108 FP 16 TN 105 FN 13]
+  Mamba, read-out per slice acc 0.876 (0.831-0.917)  AUC 0.962 (0.934-0.982)  precision 0.876  recall 0.876  specificity 0.876  F1 0.876  MCC 0.752  pair 0.950  [TP 106 FP 15 TN 106 FN 15]
+                             vs ridge: accuracy -0.004 (-0.041 to +0.033), AUC +0.025 (+0.001 to +0.050)
+
+results in D:\RidgeLIEdETECTOINvs3\results_mamba_20s_cv5: config.json, folds.csv, folds_videos.csv, fold_01 ... fold_05/, per_fold.csv, predictions_cv5.csv, summary.csv, log.txt (4 min)
