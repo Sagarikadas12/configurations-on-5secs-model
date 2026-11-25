@@ -1,0 +1,12 @@
+[
+ {
+  "model": "Ridge",
+  "setting": "strength=1",
+  "inner_cv_auc": 0.7955729166666666
+ },
+ {
+  "model": "Mamba, read-out per slice",
+  "setting": "epochs=23",
+  "inner_cv_auc": 0.8731553819444444
+ }
+]
