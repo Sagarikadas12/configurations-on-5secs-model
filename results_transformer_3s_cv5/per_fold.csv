@@ -1,0 +1,11 @@
+fold,model,setting,inner_cv_auc,test_acc,test_right,test_videos,test_auc,tp,fp,tn,fn
+1,Ridge,strength=0.3,0.9510,0.9000,45,50,0.9488,25,5,20,0
+1,"Transformer, read-out per slice",epochs=47,0.9604,0.9200,46,50,0.9888,25,4,21,0
+2,Ridge,strength=0.3,0.9428,0.9375,45,48,0.9653,22,1,23,2
+2,"Transformer, read-out per slice",epochs=47,0.9652,0.8958,43,48,0.9635,21,2,22,3
+3,Ridge,strength=0.3,0.9580,0.8958,43,48,0.9705,22,3,21,2
+3,"Transformer, read-out per slice",epochs=35,0.9592,0.9375,45,48,0.9722,21,0,24,3
+4,Ridge,strength=0.3,0.9525,0.9167,44,48,0.9288,23,3,21,1
+4,"Transformer, read-out per slice",epochs=79,0.9728,0.8958,43,48,0.9288,22,3,21,2
+5,Ridge,strength=1,0.9506,0.8542,41,48,0.9635,21,4,20,3
+5,"Transformer, read-out per slice",epochs=77,0.9749,0.8750,42,48,0.9219,22,4,20,2

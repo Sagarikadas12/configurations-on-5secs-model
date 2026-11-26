@@ -1,0 +1,56 @@
+
+===== 2026-11-26 12:32  cache: D:\RidgeLIEdETECTOINvs3\cache; seeds: 0, 1, 2; self-test:
+  PASS  input in time order: number k*48+j = slice k+1, signal j (a bump put into slice index 10, signal index 5 is found at (10, 5))
+  PASS  3 s: 80 slices of 52 frames (frames 0-4159, 237.7 s); number = (slice average - video average) / video spread, 3840 numbers
+  PASS  TransformerPerSlice(47) = TransformerSlices() from seed 0: same weights, same logits (largest difference 0.0e+00)
+  PASS  TransformerPerSlice(47) = TransformerSlices() from seed 1: same weights, same logits (largest difference 0.0e+00)
+  PASS  one finite logit per video (23,777 weights)
+  PASS  attention over all 80 slices in both directions: changing slice 41 changes every slice output (smallest change 2.4e-02)
+  PASS  slice order matters (learned position per slice): the slices in reverse order give other logits (largest change 1.0e+00)
+  PASS  training is reproducible from its seed (2 epochs on the CPU twice: largest difference 0.0e+00, change through training 3.5e-01)
+  PASS  validation logits after epoch 2 of a 3-epoch run = a run of 2 epochs (largest difference 0.0e+00): the final training for the chosen epochs follows the inner CV's path
+  INFO  2 epochs on cuda twice: largest difference 0.0e+00 (0 = a rerun of this script on this device gives the same numbers)
+3 s slices: 80 slices of 52 frames x 48 signals = 3840 numbers per video (mamba_10s_slices.slice_levels(x, 3))
+folds: from D:\RidgeLIEdETECTOINvs3\results_mamba_5s_cv5\folds.csv (the same as GroupKFold(5))
+121 people, 242 videos, 5 person-grouped folds; models per fold: ridge, Transformer, read-out per slice (23,777 weights) on cuda
+  fold 1: training 96 people (192 videos), test 25 people (50 videos)
+    Ridge                            strength 0.3  inner AUC 0.951  test acc 0.900
+    Transformer, read-out per slice  epochs  47  inner AUC 0.960  test acc 0.920 (seeds 0.900-0.940; saved models reload to the same logits)  (197s)
+  fold 1 done in 3.3 min (4 min so far)
+  fold 2: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                            strength 0.3  inner AUC 0.943  test acc 0.938
+    Transformer, read-out per slice  epochs  47  inner AUC 0.965  test acc 0.896 (seeds 0.854-0.896; saved models reload to the same logits)  (128s)
+  fold 2 done in 2.1 min (6 min so far)
+  fold 3: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                            strength 0.3  inner AUC 0.958  test acc 0.896
+    Transformer, read-out per slice  epochs  35  inner AUC 0.959  test acc 0.938 (seeds 0.896-0.917; saved models reload to the same logits)  (148s)
+  fold 3 done in 2.5 min (8 min so far)
+  fold 4: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                            strength 0.3  inner AUC 0.952  test acc 0.917
+    Transformer, read-out per slice  epochs  79  inner AUC 0.973  test acc 0.896 (seeds 0.875-0.896; saved models reload to the same logits)  (230s)
+  fold 4 done in 3.8 min (12 min so far)
+  fold 5: training 97 people (194 videos), test 24 people (48 videos)
+    Ridge                            strength 1  inner AUC 0.951  test acc 0.854
+    Transformer, read-out per slice  epochs  77  inner AUC 0.975  test acc 0.875 (seeds 0.833-0.854; saved models reload to the same logits)  (186s)
+  fold 5 done in 3.1 min (15 min so far)
+
+  results_mamba_3s_cv5\predictions_cv5.csv: same 242 videos and folds, same ridge scores (largest difference 5.0e-05, saved with 4 decimals) -> the Mamba is compared
+per fold (test accuracy):
+  fold                      Ridge Transformer, read-out per   Mamba, read-out per slice
+     1       0.900 (strength=0.3)       0.920 (   epochs=47)       0.860        (saved)
+     2       0.938 (strength=0.3)       0.896 (   epochs=47)       0.875        (saved)
+     3       0.896 (strength=0.3)       0.938 (   epochs=35)       0.875        (saved)
+     4       0.917 (strength=0.3)       0.896 (   epochs=79)       0.917        (saved)
+     5       0.854 (  strength=1)       0.875 (   epochs=77)       0.896        (saved)
+
+5-fold CV, all 121 people pooled (lie = positive class; 95% intervals resampling people):
+  Ridge                    acc 0.901 (0.860-0.938)  AUC 0.951 (0.914-0.978)  precision 0.876  recall 0.934  specificity 0.868  F1 0.904  MCC 0.803  pair 0.959  [TP 113 FP 16 TN 105 FN 8]
+  Transformer, read-out pe acc 0.905 (0.864-0.942)  AUC 0.953 (0.913-0.981)  precision 0.895  recall 0.917  specificity 0.893  F1 0.906  MCC 0.810  pair 0.959  [TP 111 FP 13 TN 108 FN 10]
+  Mamba, read-out per slic acc 0.884 (0.839-0.926)  AUC 0.957 (0.921-0.983)  precision 0.872  recall 0.901  specificity 0.868  F1 0.886  MCC 0.769  pair 0.950  [TP 109 FP 16 TN 105 FN 12]
+
+paired differences on the same 242 videos (95% intervals resampling people; McNemar exact on the videos right with only one):
+  Transformer, read-out pe - Ridge                    accuracy +0.004 (-0.029 to +0.037), AUC +0.002 (-0.017 to +0.021); right only with the first 9, only with the second 8, McNemar p = 1.000
+  Transformer, read-out pe - Mamba, read-out per slic accuracy +0.021 (-0.012 to +0.054), AUC -0.004 (-0.012 to +0.004); right only with the first 10, only with the second 5, McNemar p = 0.302
+  Mamba, read-out per slic - Ridge                    accuracy -0.017 (-0.054 to +0.021), AUC +0.005 (-0.013 to +0.024); right only with the first 8, only with the second 12, McNemar p = 0.503
+
+results in D:\RidgeLIEdETECTOINvs3\results_transformer_3s_cv5: config.json, folds.csv, folds_videos.csv, fold_01 ... fold_05/, per_fold.csv, predictions_cv5.csv, summary.csv, comparisons.csv, log.txt (15 min)

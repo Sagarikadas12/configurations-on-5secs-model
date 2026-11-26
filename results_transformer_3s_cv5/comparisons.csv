@@ -1,0 +1,4 @@
+first,second,acc_diff,acc_diff_low,acc_diff_high,auc_diff,auc_diff_low,auc_diff_high,right_only_first,right_only_second,mcnemar_p
+"Transformer, read-out per slice",Ridge,0.0041,-0.0289,0.0372,0.0016,-0.0170,0.0213,9,8,1.0000
+"Transformer, read-out per slice","Mamba, read-out per slice",0.0207,-0.0124,0.0537,-0.0038,-0.0123,0.0044,10,5,0.3018
+"Mamba, read-out per slice",Ridge,-0.0165,-0.0537,0.0207,0.0054,-0.0134,0.0240,8,12,0.5034
