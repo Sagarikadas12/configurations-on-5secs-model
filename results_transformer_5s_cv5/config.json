@@ -1,0 +1,64 @@
+{
+ "experiment": "5-fold person-grouped CV, transformer with a read-out per slice, 5 s slices (the 5 s Mamba run with a transformer)",
+ "script": "transformer_5s_cv5.py",
+ "script_sha256": "40f6103c893536c1d6baef1a61d8d6bae8f01f94b7f7a438a0fa2272ab596f32",
+ "code_version": "de365696a4cfc28c5a68aa3ed948cfada9ce707d (with uncommitted changes: transformer_5s_cv5.py)",
+ "date": "2026-11-26 11:16",
+ "torch": "2.1.1+cu118",
+ "device": "cuda",
+ "split_file": "D:\\RidgeLIEdETECTOINvs3\\split_90_31.csv",
+ "cache_dir": "D:\\RidgeLIEdETECTOINvs3\\cache",
+ "people": 121,
+ "videos": 242,
+ "input": {
+  "slices": 47,
+  "slice_frames": 88,
+  "slice_seconds": 5,
+  "signals": 48,
+  "numbers_per_video": 2256,
+  "normalisation": "per slice and signal (slice average - video average) / video spread (ridge_5s_model.slice_levels), then z-scored with the fold's training videos and cut at +-4"
+ },
+ "folds": {
+  "n_folds": 5,
+  "method": "from D:\\RidgeLIEdETECTOINvs3\\results_mamba_5s_cv5\\folds.csv",
+  "same_as_groupkfold": true,
+  "file": "folds.csv",
+  "videos_file": "folds_videos.csv"
+ },
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "max_epochs": 200,
+ "inner_folds": 5,
+ "epochs_rule": "lowest inner-CV held-out loss (inner person-grouped 5-fold CV over the fold's training people, seeds averaged)",
+ "model": {
+  "name": "Transformer, read-out per slice",
+  "class": "perslice_sequence_models.TransformerSlices()",
+  "weights": 21665,
+  "d": 32,
+  "heads": 4,
+  "layers": 2,
+  "feed_forward": 64,
+  "dropout": 0.3,
+  "positions": "learned, one per slice",
+  "readout": "linear on all 47 slice outputs (one weight vector per slice position)",
+  "activation": "relu",
+  "norm": "layer norm after attention and after feed-forward (nn.TransformerEncoderLayer defaults)",
+  "attention": "over all 47 slices in both directions (no mask)"
+ },
+ "training": {
+  "function": "ml_dl_5s_slices.train_net",
+  "loss": "binary cross-entropy",
+  "optimizer": "AdamW",
+  "lr": 0.001,
+  "weight_decay": 0.01,
+  "batch": 32,
+  "final": "every seed trained on all of the fold's training videos for the chosen epochs; test logits averaged"
+ },
+ "references": {
+  "ridge": "ridge_5s_model.fit on the same folds (trained here)",
+  "mamba": "saved test scores of D:\\RidgeLIEdETECTOINvs3\\results_mamba_5s_cv5\\predictions_cv5.csv (forward Mamba, read-out per slice, same folds)"
+ }
+}
